@@ -870,6 +870,7 @@ enable_video_x11_scrnsaver
 enable_video_x11_xshape
 enable_video_x11_vm
 enable_video_vivante
+enable_video_mali
 enable_video_cocoa
 enable_video_metal
 enable_render_metal
@@ -1661,6 +1662,7 @@ Optional Features:
                           enable X11 XShape support [[default=yes]]
   --enable-video-x11-vm   use X11 VM extension for fullscreen [[default=yes]]
   --enable-video-vivante  use Vivante EGL video driver [[default=yes]]
+  --enable-video-mali     use Mali EGL video driver [[default=no]]
   --enable-video-cocoa    use Cocoa video driver [[default=yes]]
   --enable-video-metal    include Metal support [[default=yes]]
   --enable-render-metal   enable the Metal render driver [[default=yes]]
@@ -21685,6 +21687,56 @@ $as_echo "#define SDL_VIDEO_DRIVER_VIVANTE_VDK 1" >>confdefs.h
     fi
 }
 
+CheckMaliVideo()
+{
+    # Check whether --enable-video-mali was given.
+if test "${enable_video_mali+set}" = set; then :
+  enableval=$enable_video_mali;
+else
+  enable_video_mali=no
+fi
+
+    if test x$enable_video = xyes -a x$enable_video_mali = xyes; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Mali FB API" >&5
+$as_echo_n "checking for Mali FB API... " >&6; }
+        have_mali_egl=no
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+          #define LINUX
+          #define EGL_API_FB
+          #include <EGL/egl.h>
+
+int
+main ()
+{
+
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+        have_mali_egl=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $have_mali_egl" >&5
+$as_echo "$have_mali_egl" >&6; }
+
+        if test x$have_mali_egl = xyes; then
+
+$as_echo "#define SDL_VIDEO_DRIVER_MALI 1" >>confdefs.h
+
+            EXTRA_CFLAGS="$EXTRA_CFLAGS -DLINUX -DEGL_API_FB"
+            SOURCES="$SOURCES $srcdir/src/video/mali-fbdev/*.c"
+            SUMMARY_video="${SUMMARY_video} mali"
+            have_video=yes
+        fi
+    fi
+}
+
 CheckHaikuVideo()
 {
     if test x$enable_video = xyes; then
@@ -24684,6 +24736,7 @@ case "$host" in
         CheckLinuxVersion
         CheckRPATH
         CheckVivanteVideo
+        CheckMaliVideo
 
         SOURCES="$SOURCES $srcdir/src/locale/unix/*.c"
         have_locale=yes

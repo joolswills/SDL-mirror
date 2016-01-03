@@ -2098,6 +2098,35 @@ AS_HELP_STRING([--enable-video-vivante], [use Vivante EGL video driver [[default
     fi
 }
 
+dnl Set up the Mali video driver if enabled
+CheckMaliVideo()
+{
+    AC_ARG_ENABLE(video-mali,
+AC_HELP_STRING([--enable-video-mali], [use Mali EGL video driver [[default=yes]]]),
+                  , enable_video_mali=yes)
+    if test x$enable_video = xyes -a x$enable_video_mali = xyes; then
+        AC_MSG_CHECKING(for Mali FB API)
+        have_mali_egl=no
+        AC_TRY_COMPILE([
+          #define LINUX
+          #define EGL_API_FB
+          #include <EGL/egl.h>
+        ],[
+        ],[
+        have_mali_egl=yes
+        ])
+        AC_MSG_RESULT($have_mali_egl)
+
+        if test x$have_mali_egl = xyes; then
+            AC_DEFINE(SDL_VIDEO_DRIVER_MALI, 1, [ ])
+            EXTRA_CFLAGS="$EXTRA_CFLAGS -DLINUX -DEGL_API_FB"
+            SOURCES="$SOURCES $srcdir/src/video/mali-fbdev/*.c"
+            SUMMARY_video="${SUMMARY_video} mali"
+            have_video=yes
+        fi
+    fi
+}
+
 dnl Set up the Haiku video driver if enabled
 CheckHaikuVideo()
 {
@@ -3532,6 +3561,7 @@ case "$host" in
         CheckLinuxVersion
         CheckRPATH
         CheckVivanteVideo
+        CheckMaliVideo
 
         SOURCES="$SOURCES $srcdir/src/locale/unix/*.c"
         have_locale=yes
