@@ -44,6 +44,8 @@
 
 #if SDL_VIDEO_DRIVER_RPI
 /* Raspbian places the OpenGL ES/EGL binaries in a non standard path */
+#include <unistd.h>
+#define DEFAULT_OGL ( vc4 ? "libGL.so.1" : "" )
 #define DEFAULT_EGL ( vc4 ? "libEGL.so.1" : "libbrcmEGL.so" )
 #define DEFAULT_OGL_ES2 ( vc4 ? "libGLESv2.so.2" : "libbrcmGLESv2.so" )
 #define ALT_EGL "libEGL.so"

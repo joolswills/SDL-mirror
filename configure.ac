@@ -1676,7 +1676,7 @@ AS_HELP_STRING([--enable-video-rpi], [use Raspberry Pi video driver [[default=ye
         
         if test x$have_video_rpi = xyes; then
             CFLAGS="$CFLAGS $RPI_CFLAGS"
-            SDL_CFLAGS="$SDL_CFLAGS $RPI_CFLAGS"
+            #SDL_CFLAGS="$SDL_CFLAGS $RPI_CFLAGS"
             EXTRA_CFLAGS="$EXTRA_CFLAGS $RPI_CFLAGS"
             EXTRA_LDFLAGS="$EXTRA_LDFLAGS $RPI_LIBS"
             SOURCES="$SOURCES $srcdir/src/video/raspberry/*.c"

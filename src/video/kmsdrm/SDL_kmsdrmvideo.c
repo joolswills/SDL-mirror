@@ -105,6 +105,12 @@ static unsigned int get_dricount(void)
     DIR *folder;
 
     if (!(stat(KMSDRM_DRI_PATH, &sb) == 0 && S_ISDIR(sb.st_mode))) {
+#if SDL_VIDEO_DRIVER_RPI
+        // exit silently if VC4 driver is not active
+        SDL_bool vc4 = (0 == access("/sys/module/vc4/", F_OK));
+        if (!vc4)
+            return 0;
+#endif
         SDL_SetError("The path %s cannot be opened or is not available",
         KMSDRM_DRI_PATH);
         return 0;
