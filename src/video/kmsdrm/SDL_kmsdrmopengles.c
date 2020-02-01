@@ -98,7 +98,8 @@ KMSDRM_GLES_SwapWindow(_THIS, SDL_Window * window) {
     KMSDRM_FBInfo *fb_info;
     int ret;
 
-    /* Do we still need to wait for a flip? */
+    /* Wait for confirmation that the next front buffer has been flipped, at which
+       point the previous front buffer can be released */
     int timeout = 0;
     if (_this->egl_data->egl_swapinterval == 1) {
         timeout = -1;
@@ -107,27 +108,22 @@ KMSDRM_GLES_SwapWindow(_THIS, SDL_Window * window) {
         return 0;
     }
 
-    /* Release previously displayed buffer (which is now the backbuffer) and lock a new one */
-    if (wdata->next_bo != NULL) {
-        KMSDRM_gbm_surface_release_buffer(wdata->gs, wdata->current_bo);
-        /* SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "Released GBM surface %p", (void *)wdata->next_bo); */
-
-        wdata->current_bo = wdata->next_bo;
-        wdata->next_bo = NULL;
+    /* Release the previous front buffer */
+    if (wdata->curr_bo != NULL) {
+        KMSDRM_gbm_surface_release_buffer(wdata->gs, wdata->curr_bo);
+        /* SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "Released GBM surface %p", (void *)wdata->curr_bo); */
+        wdata->curr_bo = NULL;
     }
 
+    wdata->curr_bo = wdata->next_bo;
+
+    /* Make the current back buffer the next front buffer */
     if (!(_this->egl_data->eglSwapBuffers(_this->egl_data->egl_display, wdata->egl_surface))) {
         SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "eglSwapBuffers failed.");
         return 0;
     }
 
-    if (wdata->current_bo == NULL) {
-        wdata->current_bo = KMSDRM_gbm_surface_lock_front_buffer(wdata->gs);
-        if (wdata->current_bo == NULL) {
-            return 0;
-        }
-    }
-
+    /* Lock the next front buffer so it can't be allocated as a back buffer */
     wdata->next_bo = KMSDRM_gbm_surface_lock_front_buffer(wdata->gs);
     if (wdata->next_bo == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "Could not lock GBM surface front buffer");
@@ -150,25 +146,24 @@ KMSDRM_GLES_SwapWindow(_THIS, SDL_Window * window) {
         }
     }
 
-    /* SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "drmModePageFlip(%d, %u, %u, DRM_MODE_PAGE_FLIP_EVENT, &wdata->waiting_for_flip)",
-        vdata->drm_fd, displaydata->crtc_id, fb_info->fb_id); */
+    /* Queue a page flip so the next front buffer is scanned out */
     ret = KMSDRM_drmModePageFlip(vdata->drm_fd, displaydata->crtc_id, fb_info->fb_id,
                                  DRM_MODE_PAGE_FLIP_EVENT, &wdata->waiting_for_flip);
+    /* SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "drmModePageFlip(%d, %u, %u, DRM_MODE_PAGE_FLIP_EVENT, &wdata->waiting_for_flip)",
+        vdata->drm_fd, displaydata->crtc_id, fb_info->fb_id); */
 
     if (_this->egl_data->egl_swapinterval == 1) {
-        /* Queue page flip at vsync */
-
         if (ret == 0) {
             wdata->waiting_for_flip = SDL_TRUE;
         } else {
             SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "Could not queue pageflip: %d", ret);
         }
+    }
 
-        /* Wait immediately for vsync (as if we only had two buffers), for low input-lag scenarios.
-           Run your SDL2 program with "SDL_KMSDRM_DOUBLE_BUFFER=1 <program_name>" to enable this. */
-        if (wdata->double_buffer) {
-            KMSDRM_WaitPageFlip(_this, wdata, -1);
-        }
+    /* Wait immediately for vsync (as if we only had two buffers), for low input-lag scenarios.
+       Run your SDL2 program with "SDL_KMSDRM_DOUBLE_BUFFER=1 <program_name>" to enable this. */
+    if (_this->egl_data->egl_swapinterval == 1 && wdata->double_buffer) {
+        KMSDRM_WaitPageFlip(_this, wdata, -1);
     }
 
     return 0;

@@ -765,13 +765,13 @@ KMSDRM_DestroyWindow(_THIS, SDL_Window * window)
             KMSDRM_gbm_surface_release_buffer(data->gs, data->crtc_bo);
             data->crtc_bo = NULL;
         }
+        if (data->curr_bo != NULL) {
+            KMSDRM_gbm_surface_release_buffer(data->gs, data->curr_bo);
+            data->curr_bo = NULL;
+        }
         if (data->next_bo != NULL) {
             KMSDRM_gbm_surface_release_buffer(data->gs, data->next_bo);
             data->next_bo = NULL;
-        }
-        if (data->current_bo != NULL) {
-            KMSDRM_gbm_surface_release_buffer(data->gs, data->current_bo);
-            data->current_bo = NULL;
         }
 #if SDL_VIDEO_OPENGL_EGL
         SDL_EGL_MakeCurrent(_this, EGL_NO_SURFACE, EGL_NO_CONTEXT);

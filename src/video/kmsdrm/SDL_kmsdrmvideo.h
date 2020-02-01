@@ -60,7 +60,7 @@ typedef struct SDL_DisplayData
 typedef struct SDL_WindowData
 {
     struct gbm_surface *gs;
-    struct gbm_bo *current_bo;
+    struct gbm_bo *curr_bo;
     struct gbm_bo *next_bo;
     struct gbm_bo *crtc_bo;
     SDL_bool waiting_for_flip;
